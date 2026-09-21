@@ -41,6 +41,8 @@ for _log in ["httpcore._trace", "httpx._client"]:
     _logger.propagate = False
     _logger.setLevel(logging.DEBUG)
 
+log_dir = os.environ.get("LOG_DIR", "logs")
+
 # Configurar loguru
 logger.configure(
     handlers=[
@@ -50,7 +52,7 @@ logger.configure(
             "level": "INFO",
         },
         {
-            "sink": "logs/api_{time}.log",
+            "sink": os.path.join(log_dir, "api_{time}.log"),
             "rotation": "1 day",
             "retention": "7 days",
             "format": "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}",

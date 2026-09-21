@@ -1,0 +1,25 @@
+# Dependency/build outputs must never enter the build context.
+node_modules
+.next
+out
+coverage
+
+# Local caches and logs
+.npm
+*.log
+
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+
+# Version control and editor metadata
+.git
+.gitignore
+.vscode
+.idea
+
+# Container/build metadata are read separately by the builder.
+Dockerfile
+.dockerignore
+README.md
