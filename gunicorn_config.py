@@ -1,5 +1,8 @@
+import os
+
 # Configuração do Gunicorn para operações longas
-bind = "0.0.0.0:80"
+# Porta via env (default 8080, não-privilegiada para rodar como non-root)
+bind = f"0.0.0.0:{os.environ.get('PORT', '8080')}"
 workers = 1
 threads = 4
 worker_class = "uvicorn.workers.UvicornWorker"
