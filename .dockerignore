@@ -1,0 +1,39 @@
+# Keep the backend build context tiny and ensure `COPY src ./src` never drags in
+# anything that isn't needed to serve the API.
+
+# Version control / CI
+.git
+.gitignore
+.github
+
+# Frontend is a separate app/image (~800MB incl. node_modules) — never in backend
+src/frontend
+
+# Python bytecode & build artifacts
+**/__pycache__
+**/*.py[cod]
+*.egg-info
+app_agentic_search.egg-info
+
+# Local virtualenvs
+.venv
+venv
+
+# Secrets / local env files
+.env
+*.env
+**/.env
+
+# Docs, infra manifests, tests, and one-off assets not needed at runtime
+docs
+k8s
+tests
+alembic
+alembic.ini
+DISCORD_SETUP.md
+prompt.xml
+.python-version
+
+# Container/build files themselves
+Dockerfile
+.dockerignore
