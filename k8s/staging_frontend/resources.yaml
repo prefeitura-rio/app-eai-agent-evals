@@ -20,8 +20,18 @@ spec:
       containers:
         - name: eai-agent-frontend
           image: ghcr.io/prefeitura-rio/app-agentic-search-frontend:latest
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
           ports:
-            - containerPort: 80
+            - containerPort: 3000
           # Adicione recursos para garantir que o pod tenha CPU e memória suficientes
           # Isso pode ajudar a evitar lentidão devido a restrições de recursos
           resources:
