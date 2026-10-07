@@ -33,14 +33,15 @@ spec:
             seccompProfile:
               type: RuntimeDefault
           ports:
-            - containerPort: 8080
+            - name: http
+              containerPort: 8080
           envFrom:
             - secretRef:
                 name: eai-agent-secrets
           livenessProbe:
             httpGet:
               path: /health
-              port: 8080
+              port: http
             initialDelaySeconds: 5
             periodSeconds: 30
             timeoutSeconds: 5
@@ -49,7 +50,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /health
-              port: 8080
+              port: http
             initialDelaySeconds: 5
             periodSeconds: 30
             timeoutSeconds: 5
@@ -69,7 +70,7 @@ spec:
   ports:
     - protocol: TCP
       port: 80
-      targetPort: 8080
+      targetPort: http
   type: ClusterIP
 
 ---
