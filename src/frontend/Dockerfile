@@ -1,61 +1,52 @@
-# Base image
-FROM node:20-alpine AS base
+# syntax=docker/dockerfile:1
 
-# Install dependencies only when needed
-FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat
+FROM quay.io/hummingbird/nodejs:24-builder AS deps
+USER 0
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
-COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
-RUN \
-  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Rebuild the source code only when needed
-FROM base AS builder
+COPY package.json package-lock.json ./
+RUN npm ci
+
+FROM quay.io/hummingbird/nodejs:24-builder AS builder
+USER 0
 WORKDIR /app
+
+ENV NEXT_TELEMETRY_DISABLED=1
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
-# Build the Next.js application
-RUN \
-  if [ -f yarn.lock ]; then yarn run build; \
-  elif [ -f package-lock.json ]; then npm run build; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+RUN npm run build
+RUN mkdir -p /runtime-cache /scratch
 
-# Production image, copy all the files and run next
-FROM base AS runner
-WORKDIR /app
+FROM quay.io/hummingbird/nodejs:24
+USER 0
+WORKDIR /srv/app
 
-ENV NODE_ENV=production
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    HOSTNAME=0.0.0.0 \
+    PORT=3000 \
+    HOME=/scratch \
+    TMPDIR=/scratch
 
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
+# Keep the application immutable. Only runtime cache/temp paths are owned by the
+# unprivileged process.
+COPY --from=builder --chown=65532:65532 /runtime-cache ./.next/cache
+COPY --from=builder --chown=65532:65532 /scratch /scratch
 
-# Copy the built application
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+RUN ["/usr/bin/rm", "-rf", "/bin/sh", "/usr/bin/sh", "/bin/bash", "/usr/bin/bash", "/usr/bin/npm", "/usr/bin/npx", "/usr/lib/node_modules_24/npm", "/usr/local/bin/docker-entrypoint.sh", "/usr/bin/rm"]
 
-USER nextjs
-
+USER 65532:65532
 EXPOSE 3000
-ENV PORT 3000
-
-# Start the application
-CMD HOSTNAME="0.0.0.0" node server.js
+ENTRYPOINT ["node"]
+CMD ["server.js"]
